@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Precision CNC • Smart Project Calculator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root {
+            --primary: #007AFF; --primary-dark: #0056CC; --secondary: #5856D6;
+            --background: #FFFFFF; --surface: #F2F2F7; --text-primary: #1D1D1F;
+            --text-secondary: #8E8E93; --text-tertiary: #C7C7CC; --success: #34C759;
+            --warning: #FF9500; --danger: #FF3B30; --border: #E5E5EA;
+            --shadow: 0 4px 24px rgba(0,0,0,0.08); --radius: 12px; --radius-lg: 20px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: var(--background); color: var(--text-primary); line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        .header {
+            background: var(--background); border-bottom: 1px solid var(--border);
+            position: sticky; top: 0; z-index: 100; backdrop-filter: blur(20px);
+        }
+        .nav { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; }
+        .logo { display: flex; align-items: center; gap: 12px; font-size: 24px; font-weight: 700; color: var(--text-primary); text-decoration: none; }
+        .logo-icon {
+            width: 32px; height: 32px; background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 18px;
+        }
+        .hero { text-align: center; padding: 80px 0 60px; background: linear-gradient(135deg, var(--surface) 0%, var(--background) 100%); }
+        .hero h1 { font-size: 48px; font-weight: 700; margin-bottom: 16px; background: linear-gradient(135deg, var(--text-primary), var(--primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .hero p { font-size: 20px; color: var(--text-secondary); max-width: 600px; margin: 0 auto 40px; }
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 40px; }
+        .dashboard-card { background: var(--surface); padding: 24px; border-radius: var(--radius-lg); box-shadow: var(--shadow); border: 1px solid var(--border); }
+        .dashboard-card h3 { font-size: 14px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .dashboard-value { font-size: 32px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
+        .dashboard-label { font-size: 14px; color: var(--text-tertiary); }
+        .reset-menu {
+            position: absolute; top: 100%; right: 0; background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--radius); box-shadow: var(--shadow); padding: 8px; min-width: 200px; z-index: 10; margin-top: 8px;
+        }
+        .reset-menu button { width: 100%; padding: 12px 16px; border: none; background: none; text-align: left; border-radius: var(--radius); font-size: 16px; color: var(--text-primary); cursor: pointer; }
+        .reset-menu button:hover { background: var(--background); }
+        .reset-menu button.danger { color: var(--danger); }
+        .calculator { background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow); border: 1px solid var(--border); overflow: hidden; margin-bottom: 40px; }
+        .calculator-header { padding: 24px; border-bottom: 1px solid var(--border); }
+        .calculator-header h2 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+        .calculator-body { padding: 24px; }
+        .form-section { margin-bottom: 32px; }
+        .form-section h3 { font-size: 20px; font-weight: 600; margin-bottom: 20px; color: var(--text-primary); }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; font-size: 16px; font-weight: 600; margin-bottom: 8px; color: var(--text-primary); }
+        input, select, textarea { width: 100%; padding: 16px; border: 2px solid var(--border); border-radius: var(--radius); font-size: 16px; background: var(--background); color: var(--text-primary); }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1); }
+        .time-input-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .machining-section { background: var(--background); padding: 20px; border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 16px; }
+        .machining-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .remove-btn { background: var(--danger); color: white; border: none; padding: 8px 16px; border-radius: var(--radius); cursor: pointer; font-size: 14px; }
+        .add-btn { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: var(--radius); cursor: pointer; font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .upload-area { border: 2px dashed var(--border); border-radius: var(--radius); padding: 24px; text-align: center; cursor: pointer; background: var(--background); }
+        .upload-area:hover { border-color: var(--primary); }
+        .upload-area input { display: none; }
+        .results { background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow); border: 1px solid var(--border); margin-top: 40px; overflow: hidden; }
+        .results-header { padding: 24px; border-bottom: 1px solid var(--border); }
+        .results-body { padding: 24px; }
+        .cost-breakdown { margin: 24px 0; }
+        .cost-item { display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid var(--border); }
+        .cost-item:last-child { border-bottom: none; }
+        .total-cost { font-size: 24px; font-weight: 700; color: var(--text-primary); padding: 20px 0; border-top: 2px solid var(--border); }
+        .button-group { display: flex; gap: 16px; margin: 32px 0; flex-wrap: wrap; }
+        .btn { padding: 16px 32px; border: none; border-radius: var(--radius); font-size: 16px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-secondary { background: var(--surface); color: var(--text-primary); border: 2px solid var(--border); }
+        .btn-danger { background: var(--danger); color: white; }
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; visibility: hidden; transition: all 0.3s ease; }
+        .modal.active { opacity: 1; visibility: visible; }
+        .modal-content { background: var(--surface); border-radius: var(--radius-lg); width: 90%; max-width: 500px; padding: 24px; border: 1px solid var(--border); box-shadow: var(--shadow); }
+        @media (max-width: 768px) { .hero h1 { font-size: 36px; } .hero p { font-size: 18px; } .dashboard { grid-template-columns: 1fr; } .form-grid { grid-template-columns: 1fr; } .button-group { flex-direction: column; } .btn { width: 100%; justify-content: center; } }
+        .hidden { display: none !important; }
+        
+        /* Table styles for the detailed breakdown */
+        table { width: 100%; margin-top: 12px; font-size: 14px; border-collapse: collapse; }
+        th, td { padding: 8px 4px; text-align: left; }
+        th { border-bottom: 1px solid var(--border); font-weight: 600; }
+        tbody tr { border-bottom: 1px solid var(--border); }
+        tfoot { border-top: 2px solid var(--border); font-weight: 700; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <nav class="nav">
+                <a href="#" class="logo">
+                    <div class="logo-icon">⚡</div>
+                    Precision CNC
+                </a>
+                <div class="button-group">
+                    <button class="btn btn-secondary" id="settingsBtn">⚙️ Settings</button>
+                    <button class="btn btn-secondary" id="resetOptionsBtn">🗑️ Reset</button>
+                    <div id="resetMenu" class="reset-menu hidden">
+                        <button onclick="app.resetStatistics()">📊 Reset Statistics</button>
+                        <button onclick="app.resetAllData()" class="danger">🗑️ Reset All Data</button>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </div>
+    <div class="hero">
+        <div class="container">
+            <h1>Smart Project Calculator</h1>
+            <p>Accurate quoting for CNC & Laser projects with real-time cost breakdown.</p>
+        </div>
+    </div>
+    <div class="container">
+        <!-- Dashboard -->
+        <div class="dashboard">
+            <div class="dashboard-card">
+                <h3>Average Project</h3>
+                <div class="dashboard-value" id="avgProjectValue">-</div>
+                <div class="dashboard-label">Based on history</div>
+            </div>
+            <div class="dashboard-card">
+                <h3>Top Customer</h3>
+                <div class="dashboard-value" id="topCustomer">-</div>
+                <div class="dashboard-label">Most projects</div>
+            </div>
+            <div class="dashboard-card">
+                <h3>Success Rate</h3>
+                <div class="dashboard-value" id="successRate">-</div>
+                <div class="dashboard-label">Quotes → Invoices</div>
+            </div>
+        </div>
+        <!-- Calculator -->
+        <div class="calculator">
+            <div class="calculator-header">
+                <h2>New Project</h2>
+            </div>
+            <div class="calculator-body">
+                <form id="cncCalculator">
+                    <!-- Project Info -->
+                    <div class="form-section">
+                        <h3>Project Information</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="customerName">Customer Name</label>
+                                <input type="text" id="customerName" placeholder="Enter name">
+                            </div>
+                            <div class="form-group">
+                                <label for="projectName">Project Name</label>
+                                <input type="text" id="projectName" placeholder="e.g., Signage, Furniture">
+                            </div>
+                            <div class="form-group">
+                                <label for="machineType">Machine Type</label>
+                                <select id="machineType">
+                                    <option value="cnc">CNC Router</option>
+                                    <option value="laser">Laser Cutter</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="quoteValidity">Quote Validity (days)</label>
+                                <input type="number" id="quoteValidity" min="1" value="30">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="quoteNotes">Notes</label>
+                            <textarea id="quoteNotes" rows="2" placeholder="Special instructions..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Reference Image (Optional)</label>
+                            <div class="upload-area" id="uploadArea">
+                                <input type="file" id="projectImage" accept="image/*">
+                                <p>📷 Click to upload image</p>
+                                <img id="imagePreview" class="hidden" style="max-width:100%; margin-top:12px; border-radius:8px;">
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Material & Quantity -->
+                    <div class="form-section">
+                        <h3>Material & Quantity</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="totalQuantity">Total Pieces</label>
+                                <input type="number" id="totalQuantity" min="1" value="1" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label for="materialCost">Raw Material Cost (MVR)</label>
+                                <input type="number" id="materialCost" step="0.01" min="0" value="900">
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Main Part -->
+                    <div class="form-section">
+                        <h3>Main Part</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="mainQuantity">Pieces</label>
+                                <input type="number" id="mainQuantity" min="0" value="4" oninput="app.updateTotalQuantity()">
+                            </div>
+                            <div class="form-group">
+                                <label for="mainMinutesPerPiece">Minutes per piece</label>
+                                <input type="number" id="mainMinutesPerPiece" min="0" step="0.1" value="20">
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Additional Parts -->
+                    <div class="form-section">
+                        <h3>Other Parts</h3>
+                        <div id="additionalMachiningContainer"></div>
+                        <button type="button" class="add-btn" onclick="app.addMachiningSection()">+ Add Another Part</button>
+                    </div>
+                    <!-- Design Time -->
+                    <div class="form-section">
+                        <h3>Design & Setup</h3>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Design Time</label>
+                                <div class="time-input-group">
+                                    <div><input type="number" id="designHours" min="0" value="0"><small>Hours</small></div>
+                                    <div><input type="number" id="designMinutes" min="0" max="59" value="5"><small>Minutes</small></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="button-group">
+                        <button type="button" class="btn btn-primary" onclick="app.calculateCost()">🧠 Calculate Quote</button>
+                        <button type="button" class="btn btn-secondary" onclick="app.resetForm()">🔄 Reset</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <!-- Results -->
+        <div id="result" class="results hidden">
+            <div class="results-header">
+                <h2>Quote Summary</h2>
+            </div>
+            <div class="results-body">
+                <div class="cost-breakdown">
+                    <!-- Material -->
+                    <div class="cost-item">
+                        <span>Materials (with&nbsp;mark-up)</span>
+                        <span id="materialCostResult">0 MVR</span>
+                    </div>
+
+                    <!-- Machining Block -->
+                    <div id="machiningBlock"></div>
+
+                    <!-- Design/Setup -->
+                    <div class="cost-item">
+                        <span>Design &amp; Set-up</span>
+                        <span id="laborCostResult">0 MVR</span>
+                    </div>
+
+                    <!-- Totals -->
+                    <div class="cost-item total-cost">
+                        <span>Total Cost</span>
+                        <span id="totalCost">0 MVR</span>
+                    </div>
+                    <div class="cost-item">
+                        <span>Cost per Piece</span>
+                        <span id="perPieceCost">0 MVR</span>
+                    </div>
+
+                    <!-- Detailed Table -->
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="text-align:left;">Group</th>
+                                <th style="text-align:center;">Pieces</th>
+                                <th style="text-align:center;">Min / pc</th>
+                                <th style="text-align:center;">Total Hrs</th>
+                                <th style="text-align:right;">Rate</th>
+                                <th style="text-align:right;">Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detailTableBody"></tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="5">TOTAL MACHINE TIME</td>
+                                <td id="totalMachineTime" style="text-align:right;">0 h</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="app.generatePDF('quote')">📄 Generate Quotation</button>
+                    <button class="btn btn-secondary" onclick="app.generatePDF('invoice')">🧾 Generate Invoice</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <h3>Shop Settings</h3>
+            <div class="form-group">
+                <label>Company Name</label>
+                <input type="text" id="settingCompanyName" placeholder="e.g., Precision CNC">
+            </div>
+            <div class="form-group">
+                <label>Company Tagline</label>
+                <input type="text" id="settingCompanyTagline" placeholder="e.g., Malé, Maldives">
+            </div>
+            <div class="form-group">
+                <label>CNC Router Rate (MVR/hour)</label>
+                <input type="number" id="settingCncRate" value="800" min="0" step="10">
+            </div>
+            <div class="form-group">
+                <label>Laser Cutter Rate (MVR/hour)</label>
+                <input type="number" id="settingLaserRate" value="1000" min="0" step="10">
+            </div>
+            <div class="form-group">
+                <label>Design Rate (MVR/hour)</label>
+                <input type="number" id="settingDesignRate" value="500" min="0" step="10">
+            </div>
+            <div class="form-group">
+                <label>Material Markup (e.g., 1.5 = 50% markup)</label>
+                <input type="number" id="settingMaterialMarkup" value="1.5" min="1" step="0.05">
+            </div>
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="app.saveSettings()">✅ Save</button>
+                <button class="btn btn-secondary" onclick="app.closeSettings()">✖️ Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class SmartCNCCalculator {
+            constructor() {
+                this.initialize();
+                this.setupEventListeners();
+            }
+            
+            initialize() {
+                // Load settings
+                this.companyName = localStorage.getItem('companyName') || 'Precision CNC';
+                this.companyTagline = localStorage.getItem('companyTagline') || '';
+                this.cncRate = parseFloat(localStorage.getItem('cncRate')) || 800;
+                this.laserRate = parseFloat(localStorage.getItem('laserRate')) || 1000;
+                this.designRate = parseFloat(localStorage.getItem('designRate')) || 500;
+                this.materialMarkup = parseFloat(localStorage.getItem('materialMarkup')) || 1.5;
+
+                this.machiningCounter = 0;
+                this.currentCalculation = null;
+                this.quotes = JSON.parse(localStorage.getItem('cncQuotes')) || {};
+                this.nextQuoteNumber = parseInt(localStorage.getItem('nextQuoteNumber')) || 1;
+                this.smartDefaults = JSON.parse(localStorage.getItem('smartDefaults')) || {
+                    materialCosts: [], customers: []
+                };
+                this.updateDashboard();
+            }
+            
+            setupEventListeners() {
+                document.getElementById('settingsBtn').addEventListener('click', () => this.openSettings());
+                document.getElementById('resetOptionsBtn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.toggleResetMenu();
+                });
+                document.getElementById('uploadArea').addEventListener('click', () => {
+                    document.getElementById('projectImage').click();
+                });
+                document.getElementById('projectImage').addEventListener('change', (e) => this.handleImageUpload(e));
+                document.addEventListener('click', () => this.hideResetMenu());
+            }
+            
+            toggleResetMenu() {
+                const menu = document.getElementById('resetMenu');
+                menu.classList.toggle('hidden');
+            }
+            
+            hideResetMenu() {
+                document.getElementById('resetMenu').classList.add('hidden');
+            }
+            
+            resetStatistics() {
+                if (confirm('Reset learning data only? Quotes will be kept.')) {
+                    this.smartDefaults = { materialCosts: [], customers: [] };
+                    localStorage.setItem('smartDefaults', JSON.stringify(this.smartDefaults));
+                    this.updateDashboard();
+                    alert('Statistics reset!');
+                }
+            }
+            
+            resetAllData() {
+                if (confirm('Reset EVERYTHING?')) {
+                    localStorage.clear();
+                    location.reload();
+                }
+            }
+            
+            updateDashboard() {
+                const avg = this.smartDefaults.materialCosts.length ?
+                    Math.round(this.smartDefaults.materialCosts.reduce((a,b)=>a+b)/this.smartDefaults.materialCosts.length) : 0;
+                document.getElementById('avgProjectValue').textContent = avg ? `MVR ${avg}` : '-';
+                
+                const customerCounts = this.smartDefaults.customers.reduce((acc, c) => {
+                    acc[c] = (acc[c] || 0) + 1;
+                    return acc;
+                }, {});
+                const top = Object.keys(customerCounts).reduce((a, b) => customerCounts[a] > customerCounts[b] ? a : b, '');
+                document.getElementById('topCustomer').textContent = top || '-';
+                
+                const total = Object.keys(this.quotes).length;
+                const success = Object.values(this.quotes).filter(q => q.status === 'invoiced').length;
+                document.getElementById('successRate').textContent = total ? `${Math.round(success/total*100)}%` : '-';
+            }
+            
+            calculateCost() {
+                try {
+                    const calc = this.performCalculation();
+                    this.displayResults(calc);
+                    this.learnFromUsage(calc);
+                    document.getElementById('result').classList.remove('hidden');
+                } catch (e) {
+                    alert('Error: ' + e.message);
+                }
+            }
+            
+            performCalculation() {
+                const machineType = document.getElementById('machineType').value;
+                const rawMat = parseFloat(document.getElementById('materialCost').value) || 0;
+                const totalQty = parseInt(document.getElementById('totalQuantity').value) || 1;
+                const customer = document.getElementById('customerName').value || 'Customer';
+                const project = document.getElementById('projectName').value || 'Project';
+                const notes = document.getElementById('quoteNotes').value || '';
+                const validity = parseInt(document.getElementById('quoteValidity').value) || 30;
+                const image = window.projectImageBase64 || '';
+
+                let totalMachineHours = 0;
+                const mainQty = parseInt(document.getElementById('mainQuantity').value) || 0;
+                const mainMin = parseFloat(document.getElementById('mainMinutesPerPiece').value) || 0;
+                totalMachineHours += mainQty * (mainMin / 60);
+
+                // Additional parts
+                const container = document.getElementById('additionalMachiningContainer');
+                const parts = container.querySelectorAll('.machining-section');
+                const machiningDetails = [];
+                
+                parts.forEach((sec, i) => {
+                    const qty = parseInt(sec.querySelector(`#machiningQuantity${i+1}`).value) || 0;
+                    const min = parseFloat(sec.querySelector(`#machiningMinutesPerPiece${i+1}`).value) || 0;
+                    const hours = min / 60;
+                    totalMachineHours += qty * hours;
+                    machiningDetails.push({ 
+                        quantity: qty, 
+                        minutes: min, 
+                        totalHours: qty * hours 
+                    });
+                });
+
+                // Laser minimum time
+                if (machineType === 'laser' && totalMachineHours < (10/60)) {
+                    totalMachineHours = 10/60;
+                }
+
+                const machineRate = machineType === 'laser' ? this.laserRate : this.cncRate;
+                const designH = parseFloat(document.getElementById('designHours').value) || 0;
+                const designM = parseFloat(document.getElementById('designMinutes').value) || 0;
+                const totalDesignHours = designH + designM/60;
+
+                const materialCost = rawMat * this.materialMarkup;
+                const machiningCost = totalMachineHours * machineRate;
+                const designCost = totalDesignHours * this.designRate;
+                const totalCost = materialCost + machiningCost + designCost;
+
+                return {
+                    quoteNumber: `Q-${String(this.nextQuoteNumber).padStart(4, '0')}`,
+                    date: new Date().toLocaleDateString('en-GB'),
+                    customerName: customer,
+                    projectName: project,
+                    machineType: machineType === 'laser' ? 'Laser Cutter' : 'CNC Router',
+                    materialCost: parseFloat(materialCost.toFixed(2)),
+                    machiningCost: parseFloat(machiningCost.toFixed(2)),
+                    designCost: parseFloat(designCost.toFixed(2)),
+                    totalCost: parseFloat(totalCost.toFixed(2)),
+                    perPiece: parseFloat((totalCost / totalQty).toFixed(2)),
+                    totalQuantity: totalQty,
+                    validityDays: validity,
+                    notes,
+                    imageBase64: image,
+                    machiningDetails,
+                    totalMachineHours,
+                    machineRate
+                };
+            }
+            
+            displayResults(calc) {
+                this.currentCalculation = calc;
+
+                // Basic cost breakdown
+                document.getElementById('materialCostResult').textContent = `${calc.materialCost.toFixed(2)} MVR`;
+                document.getElementById('laborCostResult').textContent = `${calc.designCost.toFixed(2)} MVR`;
+                document.getElementById('totalCost').textContent = `${calc.totalCost.toFixed(2)} MVR`;
+                document.getElementById('perPieceCost').textContent = `${calc.perPiece.toFixed(2)} MVR`;
+
+                // Detailed table
+                let rows = '';
+                const machineRate = calc.machineRate;
+
+                // Main part
+                const mainQty = parseInt(document.getElementById('mainQuantity').value) || 0;
+                const mainMin = parseFloat(document.getElementById('mainMinutesPerPiece').value) || 0;
+                const mainHrs = (mainQty * mainMin / 60);
+                const mainCost = mainHrs * machineRate;
+                
+                rows += `
+                    <tr>
+                        <td>Main</td>
+                        <td style="text-align:center;">${mainQty}</td>
+                        <td style="text-align:center;">${mainMin}</td>
+                        <td style="text-align:center;">${mainHrs.toFixed(2)}</td>
+                        <td style="text-align:right;">${machineRate}/h</td>
+                        <td style="text-align:right;">${mainCost.toFixed(2)} MVR</td>
+                    </tr>`;
+
+                // Additional parts
+                calc.machiningDetails.forEach((op, i) => {
+                    const cost = op.totalHours * machineRate;
+                    rows += `
+                        <tr>
+                            <td>Part ${i + 1}</td>
+                            <td style="text-align:center;">${op.quantity}</td>
+                            <td style="text-align:center;">${op.minutes}</td>
+                            <td style="text-align:center;">${op.totalHours.toFixed(2)}</td>
+                            <td style="text-align:right;">${machineRate}/h</td>
+                            <td style="text-align:right;">${cost.toFixed(2)} MVR</td>
+                        </tr>`;
+                });
+
+                document.getElementById('detailTableBody').innerHTML = rows;
+                
+                // Total machine time
+                const totalMachineTime = calc.machiningDetails.reduce((total, op) => total + op.totalHours, mainHrs);
+                document.getElementById('totalMachineTime').textContent = totalMachineTime.toFixed(2) + ' h';
+            }
+            
+            learnFromUsage(calc) {
+                this.smartDefaults.materialCosts.push(calc.materialCost);
+                this.smartDefaults.customers.push(calc.customerName);
+                if (this.smartDefaults.materialCosts.length > 100) {
+                    this.smartDefaults.materialCosts = this.smartDefaults.materialCosts.slice(-100);
+                    this.smartDefaults.customers = this.smartDefaults.customers.slice(-100);
+                }
+                localStorage.setItem('smartDefaults', JSON.stringify(this.smartDefaults));
+                this.updateDashboard();
+            }
+            
+            addMachiningSection() {
+                this.machiningCounter++;
+                const container = document.getElementById('additionalMachiningContainer');
+                const div = document.createElement('div');
+                div.className = 'machining-section';
+                div.innerHTML = `
+                    <div class="machining-header">
+                        <h4>Additional Part ${this.machiningCounter}</h4>
+                        <button type="button" class="remove-btn" onclick="this.parentElement.parentElement.remove(); app.updateTotalQuantity();">Remove</button>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Pieces</label>
+                            <input type="number" id="machiningQuantity${this.machiningCounter}" min="0" value="1" onchange="app.updateTotalQuantity()">
+                        </div>
+                        <div class="form-group">
+                            <label>Minutes per piece</label>
+                            <input type="number" id="machiningMinutesPerPiece${this.machiningCounter}" min="0" step="0.1" value="8">
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+                this.updateTotalQuantity();
+            }
+            
+            updateTotalQuantity() {
+                let total = parseInt(document.getElementById('mainQuantity').value) || 0;
+                const container = document.getElementById('additionalMachiningContainer');
+                const inputs = container.querySelectorAll('input[id^="machiningQuantity"]');
+                inputs.forEach(input => {
+                    total += parseInt(input.value) || 0;
+                });
+                document.getElementById('totalQuantity').value = total || 1;
+            }
+            
+            resetForm() {
+                document.getElementById('cncCalculator').reset();
+                document.getElementById('result').classList.add('hidden');
+                document.getElementById('additionalMachiningContainer').innerHTML = '';
+                document.getElementById('imagePreview').classList.add('hidden');
+                window.projectImageBase64 = '';
+                this.machiningCounter = 0;
+                this.updateTotalQuantity();
+            }
+            
+            handleImageUpload(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    window.projectImageBase64 = event.target.result;
+                    const preview = document.getElementById('imagePreview');
+                    preview.src = event.target.result;
+                    preview.classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+            
+            openSettings() {
+                document.getElementById('settingCompanyName').value = this.companyName;
+                document.getElementById('settingCompanyTagline').value = this.companyTagline;
+                document.getElementById('settingCncRate').value = this.cncRate;
+                document.getElementById('settingLaserRate').value = this.laserRate;
+                document.getElementById('settingDesignRate').value = this.designRate;
+                document.getElementById('settingMaterialMarkup').value = this.materialMarkup;
+                document.getElementById('settingsModal').classList.add('active');
+            }
+            
+            saveSettings() {
+                const name = document.getElementById('settingCompanyName').value || 'Precision CNC';
+                const tag = document.getElementById('settingCompanyTagline').value || '';
+                const cnc = parseFloat(document.getElementById('settingCncRate').value);
+                const laser = parseFloat(document.getElementById('settingLaserRate').value);
+                const design = parseFloat(document.getElementById('settingDesignRate').value);
+                const markup = parseFloat(document.getElementById('settingMaterialMarkup').value);
+
+                localStorage.setItem('companyName', name);
+                localStorage.setItem('companyTagline', tag);
+                localStorage.setItem('cncRate', cnc);
+                localStorage.setItem('laserRate', laser);
+                localStorage.setItem('designRate', design);
+                localStorage.setItem('materialMarkup', markup);
+
+                this.companyName = name;
+                this.companyTagline = tag;
+                this.cncRate = cnc;
+                this.laserRate = laser;
+                this.designRate = design;
+                this.materialMarkup = markup;
+
+                this.closeSettings();
+                alert('Settings saved!');
+            }
+            
+            closeSettings() {
+                document.getElementById('settingsModal').classList.remove('active');
+            }
+            
+            generatePDF(type) {
+                const calc = this.currentCalculation;
+                if (!calc) { alert('Please calculate first.'); return; }
+
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+
+                doc.setFontSize(20);
+                doc.text(this.companyName, 14, 20);
+                if (this.companyTagline) {
+                    doc.setFontSize(12);
+                    doc.text(this.companyTagline, 14, 28);
+                }
+                doc.setFontSize(14);
+                doc.text(`${type === 'quote' ? 'QUOTATION' : 'INVOICE'}`, 196, 20, { align: 'right' });
+
+                doc.setFontSize(12);
+                doc.text(`#${calc.quoteNumber}`, 14, 40);
+                doc.text(`Date: ${calc.date}`, 196, 40, { align: 'right' });
+
+                doc.setFontSize(14);
+                doc.text('Prepared For:', 14, 55);
+                doc.setFontSize(12);
+                doc.text(calc.customerName, 14, 62);
+                doc.text(`Project: ${calc.projectName}`, 14, 70);
+                doc.text(`Machine: ${calc.machineType}`, 14, 78);
+
+                let y = 90;
+                const addRow = (label, value) => {
+                    doc.text(label, 16, y);
+                    doc.text(value, 190, y, { align: 'right' });
+                    y += 8;
+                };
+                
+                addRow('Materials', `${calc.materialCost.toFixed(2)} MVR`);
+                addRow(`Machining (${calc.machineType})`, `${calc.machiningCost.toFixed(2)} MVR`);
+                addRow('Design & Setup', `${calc.designCost.toFixed(2)} MVR`);
+                doc.line(14, y, 196, y); y += 4;
+                addRow('TOTAL', `${calc.totalCost.toFixed(2)} MVR`);
+                addRow(`Cost per piece (${calc.totalQuantity} pcs)`, `${calc.perPiece.toFixed(2)} MVR`);
+
+                if (calc.imageBase64 && y < 200) {
+                    y += 10;
+                    doc.text('Reference Image:', 14, y);
+                    try {
+                        doc.addImage(calc.imageBase64, 'JPEG', 14, y + 8, 180, 90);
+                    } catch (e) {}
+                }
+
+                y = 260;
+                doc.text(`Quote valid for ${calc.validityDays} days`, 14, y);
+                if (calc.notes) {
+                    y += 8;
+                    doc.text('Notes:', 14, y);
+                    const lines = doc.splitTextToSize(calc.notes, 180);
+                    doc.text(lines, 14, y + 6);
+                }
+
+                doc.save(`${calc.quoteNumber}_${type === 'quote' ? 'Quotation' : 'Invoice'}.pdf`);
+
+                if (type === 'quote') {
+                    this.quotes[calc.quoteNumber] = { ...calc, status: 'quoted' };
+                    localStorage.setItem('cncQuotes', JSON.stringify(this.quotes));
+                    this.nextQuoteNumber++;
+                    localStorage.setItem('nextQuoteNumber', this.nextQuoteNumber);
+                }
+            }
+        }
+
+        // Initialize the application
+        const app = new SmartCNCCalculator();
+    </script>
+</body>
+</html>
